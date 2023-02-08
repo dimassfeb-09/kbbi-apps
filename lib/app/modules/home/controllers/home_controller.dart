@@ -1,11 +1,11 @@
+import 'dart:convert';
+
+import 'package:com_kbbisuperapp/app/modules/home/models/home_model.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
-import 'package:html/parser.dart';
 
 class HomeController extends GetxController {
-  //TODO: Implement HomeController
-
   TextEditingController searchField = TextEditingController();
 
   RxString title = "".obs;
@@ -16,27 +16,29 @@ class HomeController extends GetxController {
   RxString notAdaData = "Tidak ada data".obs;
   RxBool isVisible = false.obs;
 
-  searchKbbi() async {
+  void searchKbbi() async {
     try {
       final response = await http.Client().get(Uri.parse(
           "https://kbbi-api-zhirrr.vercel.app/api/kbbi?text=${searchField.text}"));
 
       if (response.statusCode == 200) {
-        var document = parse(response.body);
-        var getDesc = document.getElementsByClassName("arti")[0].children;
+        Map<String, dynamic> result = jsonDecode(response.body);
+        KBBIModel kbbi = KBBIModel.fromJson(result);
 
-        for (var i = 0; i < getDesc.length; i++) {
-          title.value = getDesc[0].text.trim().split("bentuk tidak baku").first;
-          subtitle.value = getDesc[0].text.trim().split("  ").last;
-          desc.value.add(getDesc[1].children[i].text.trim());
+        if (title.value != "" && desc != []) {
+          title.value = "";
+          desc.value = [];
         }
+
+        title.value = kbbi.title;
+        for (var i = 0; i < kbbi.desc.length; i++) {
+          desc.add(kbbi.desc[i]);
+        }
+      } else if (response.statusCode >= 400) {
+        title.value = "Data tidak ditemukan";
       }
-    } on RangeError catch (e) {
-      if (e.invalidValue == 0) {
-        title.value = "Tidak ada data";
-        subtitle.value;
-        desc.value = [];
-      }
+    } catch (e) {
+      return;
     }
   }
 }
